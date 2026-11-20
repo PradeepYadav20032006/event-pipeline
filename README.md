@@ -7,7 +7,7 @@
 ![aio-pika](https://img.shields.io/badge/aio--pika-9.6-blueviolet)
 ![License](https://img.shields.io/badge/License-MIT-green)
 
-A production-grade, distributed event streaming pipeline built with RabbitMQ, `aio-pika`, and FastAPI. Features **At-Least-Once Delivery**, publisher confirms, a **3-Ring Dead Letter Exchange (DLX)** backoff architecture, and an operational DLQ inspection/replay CLI.
+A robust distributed event streaming pipeline built with RabbitMQ, `aio-pika`, and FastAPI. Features **At-Least-Once Delivery Reliability**, publisher confirms, a **3-Ring Dead Letter Exchange (DLX)** backoff architecture, and an operational DLQ inspection/replay CLI.
 
 ---
 
@@ -39,10 +39,11 @@ flowchart LR
 
 ## ⚡ Core Engineering Highlights
 
-### 1. Zero Message Loss (At-Least-Once Delivery)
-- **Publisher Confirms (`publisher_confirms=True`)**: Asynchronously awaits RabbitMQ's basic.ack on ingestion before returning HTTP 202 to client.
-- **Message Persistence (`DeliveryMode.PERSISTENT`)**: All messages are written to disk across durable exchanges and queues.
-- **Manual Consumer ACKs**: Messages are acknowledged strictly after successful business logic execution.
+### 1. At-Least-Once Delivery Reliability
+- **Publisher Confirms (`publisher_confirms=True`)**: Asynchronously awaits RabbitMQ's `basic.ack` on broker ingestion before returning HTTP 202 Accepted to client.
+- **Message Durability (`DeliveryMode.PERSISTENT`)**: All messages are written to disk across durable exchanges and durable queues to survive broker restarts.
+- **Explicit Consumer ACKs**: Messages are acknowledged strictly after successful business logic execution. In the event of an unhandled consumer crash before ACK, RabbitMQ re-queues the message for another worker.
+- **Deduplication Responsibility**: Consistent with at-least-once distributed delivery semantics, downstream consumers executing non-idempotent side effects (e.g., third-party email or payment APIs) should maintain an inbox deduplication table.
 
 ### 2. 3-Ring Retry & Dead-Letter Architecture
 - **Zero-CPU Delay**: Retries rest safely in an unconsumed queue (`orders.retry.queue`) configured with `x-message-ttl: 5000ms`.
