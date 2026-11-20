@@ -111,12 +111,26 @@ Run the full pytest suite:
 pytest -v
 ```
 
-### Test Suite Structure:
-- `tests/test_foundation.py`: Health probes and robust connection manager lifecycle.
-- `tests/test_producer.py`: CloudEvents envelope validation, publisher confirms, and HTTP 202 ingress.
-- `tests/test_topology.py`: Declarations of exchanges, queues, `x-dead-letter-exchange`, and `x-message-ttl`.
-- `tests/test_consumer.py`: Successful processing, transient retry routing, max retry exhaustion, and immediate poison pill quarantine.
-- `tests/test_dlq_admin.py`: Non-destructive DLQ inspection, atomic replay, and queue purging.
+### Test Suite Structure (15/15 Passing):
+- `tests/test_foundation.py` (2 tests): Health probes and robust connection manager lifecycle.
+- `tests/test_producer.py` (3 tests): CloudEvents envelope validation, publisher confirms (`publisher_confirms=True`), and HTTP 202 ingress.
+- `tests/test_topology.py` (3 tests): Declarations of exchanges, queues, `x-dead-letter-exchange`, and `x-message-ttl: 5000ms`.
+- `tests/test_consumer.py` (4 tests): Successful processing, transient retry routing, max retry exhaustion, and immediate poison pill quarantine (`PoisonPillException`).
+- `tests/test_dlq_admin.py` (3 tests): Non-destructive DLQ inspection, atomic replay back to main exchange, and queue purging.
+
+```bash
+# Execute test suite
+pytest -q
+# Output: 15 passed in ~1.08s
+```
+
+---
+
+## ⚠️ Infrastructure Boundary & Known Limitations
+
+- **Consumer Side-Effects**: While RabbitMQ guarantees at-least-once message delivery, non-transactional downstream side effects (such as sending external webhooks or emails) require an Inbox deduplication pattern on the receiving service.
+- **Retry Ring Granularity**: The default retry ring TTL is set to 5000ms; exponential backoff in RabbitMQ without plugins uses stepped discrete queues rather than continuous arbitrary delays.
+- **Test Harness vs. Live Broker**: Automated tests run with simulated asynchronous AMQP protocol adapters (`aio-pika` mocks) for zero-dependency CI execution. Full live testing requires running RabbitMQ (configured in `docker-compose.yml`).
 
 ---
 
